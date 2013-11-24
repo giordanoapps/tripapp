@@ -22,16 +22,16 @@
 	margin-left: 15px;
 }
 
-#login-article {
+#article-signin {
 	padding: 3rem 3rem 1.5rem 3rem;
 }
 
 .offline {
-	color: red;
+	border-left: 10px solid #FF0000;
 }
 
 .online {
-	color: green;
+	border-left: 10px solid #54DB08;
 }
 
 .hidden {
@@ -40,4 +40,17 @@
 
 #friends li {
 	cursor: pointer;
+}
+
+.spin-people {
+	float: right;
+	margin-top: 5px;
+}
+
+body > section {
+	height: 100%;
+}
+
+#section-map > .content {
+  padding: 0px;
 }

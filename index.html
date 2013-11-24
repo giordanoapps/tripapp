@@ -2,28 +2,162 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Building Blocks app</title>
-  <script>
-    // Trun it to false to always install 'normal' package
-    var supportHIDPI = false;
-    var isFFOS = ("mozApps" in navigator && navigator.userAgent.search("Mobile") != -1);
+  <meta name="viewport" content="width=device-width, user-scalable=no" />
+  <title>iFriend Beta</title>
 
-    if ( isFFOS ) {
-      var manifestUrl = 'http://buildingfirefoxos.github.io/Building-Blocks/package/package.manifest';
-      var req = navigator.mozApps.installPackage(manifestUrl);
-      req.onsuccess = function() {
-        console.log(this.result.origin);
-      };
-      req.onerror = function() {
-        console.log(this.error.name);
-      };
+  <!-- Building blocks -->
+  <link rel="stylesheet" href="style/action_menu.css">
+  <link rel="stylesheet" href="style/buttons.css">
+  <link rel="stylesheet" href="style/confirm.css">
+  <link rel="stylesheet" href="style/edit_mode.css">
+  <link rel="stylesheet" href="style/headers.css">
+  <link rel="stylesheet" href="style/input_areas.css">
+  <link rel="stylesheet" href="style/status.css">
+  <link rel="stylesheet" href="style/switches.css">
+  <link rel="stylesheet" href="style_unstable/drawer.css">
+  <link rel="stylesheet" href="style_unstable/lists.css">
+  <link rel="stylesheet" href="style_unstable/progress_activity.css">
+  <link rel="stylesheet" href="style_unstable/scrolling.css">
+  <link rel="stylesheet" href="style_unstable/seekbars.css">
+  <link rel="stylesheet" href="style_unstable/tabs.css">
+  <link rel="stylesheet" href="style_unstable/toolbars.css">
 
-    } else {
-      window.location.href = "app.html"
-    }
+  <!-- Icons -->
+  <link rel="stylesheet" href="icons/styles/action_icons.css">
+  <link rel="stylesheet" href="icons/styles/media_icons.css">
+  <link rel="stylesheet" href="icons/styles/comms_icons.css">
+  <link rel="stylesheet" href="icons/styles/settings_icons.css">
 
+  <!-- Transitions -->
+  <link rel="stylesheet" href="transitions.css">
+  
+  <!-- Util CSS: some extra tricks -->
+  <link rel="stylesheet" href="util.css">
+  <link rel="stylesheet" href="fonts.css">
+
+  <!-- Additional markup to make Building Blocks kind of cross browser -->
+  <link rel="stylesheet" href="cross_browser.css">
+
+  <!-- NEW CSS -->
+  <link rel="stylesheet" href="override.css">
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="style/app.css">
+
+  <!-- GOOGLE MAPS API -->
+  <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?sensor=true">
   </script>
 </head>
 <body>
+
+  <!--·························· Sign in Section ··························-->
+  <section role="region" id="section-signin" class="current" data-position="right">
+    <header class="fixed">
+      <h1>Please sign in</h1>
+    </header>
+    <article id="article-signin" class="content scrollable header">
+      <a role="button" class="blue" id="loginButton" href="https://www.facebook.com/dialog/oauth/?client_id=640821362635753&redirect_uri=file:///index.html">
+        Sign in with Facebook
+      </a>
+    </article>
+  </section>
+
+  <!--·························· Index ··························-->
+  <section id="section-index" data-position="current" class="left">
+    <section id="drawer" role="region">
+      <header class="fixed">
+        <h1>iFind <em>alpha</em></h1>
+      </header>
+      <article id="after-login-article" class="content scrollable header">
+        <div id="fb-root"></div>
+        <br/>
+        <section data-type="list">
+          <header>Friend list</header>
+          <ul id="friends">
+            <li>
+              <p>Loading...</p>
+            </li>
+          </ul>
+          <br/>
+          <a role="button" class="blue" target="_blank" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fparse.com">
+            Invite some friends!
+          </a>
+        </section>
+      </article>
+    </section>
+
+  </section>
+
+  <!--·························· Loading ··························-->
+  <section id="overlay-loading" data-position="back" class="fullscreen">
+    <form role="dialog" data-type="action">
+      <section>
+        <h1>Loading...</h1>
+        <p role="status">
+          <span></span>
+          <progress class="pack-activity" value="0" max="100"></progress>
+        </p>
+      </section>
+    </form>
+  </section>
+
+  <!--·························· Invited to a Trip ··························-->
+  <section id="overlay-confirm-trip" data-position="back" class="fullscreen">
+    <form role="dialog" data-type="confirm">
+      <section>
+        <h1>You have been invited to a trip!</h1>
+        <p id="whoInvited"></p>
+      </section>
+      <menu>
+        <button type="button" class="danger">Deny</button>
+        <button type="button" class="recommend">Accept & trip</button>
+      </menu>
+    </form>
+  </section>
+
+  <!--·························· Confirmed a Trip ··························-->
+  <section id="overlay-accepted-trip" data-position="back" class="fullscreen">
+    <form role="dialog" data-type="confirm">
+      <section>
+        <h1>Your friend accepted the trip!</h1>
+        <p id="whoAccepted"></p>
+      </section>
+      <menu>
+        <button type="button" class="danger">Cancel</button>
+        <button type="button" class="recommend">Start trip</button>
+      </menu>
+    </form>
+  </section>
+
+  <!--·························· Map areas ··························-->
+  <section role="region" id="section-map" data-position="right">
+    <header class="fixed">
+      <a id="map-exit" href="#">
+        <span class="icon icon-close">exit</span>
+      </a>
+      <menu type="toolbar">
+        <a id="map-submit-directions" href="#">
+          <span class="icon icon-send">submit</span>
+        </a>
+      </menu>
+      <form action="#" onSubmit="return false;">
+        <input id="map-directions" type="text" placeholder="Where should we go?">
+        <button type="reset">Remove text</button>
+      </form>
+    </header>
+    <article id="map-article" class="content scrollable header">
+      <div id="map-canvas"></div>
+    </article>
+  </section>
+
+  <script type="text/javascript" defer src="js/jquery-1.10.2.min.js"></script>
+  <script type="text/javascript" defer src="js/status.js"></script>
+  <script type="text/javascript" defer src="js/seekbars.js"></script>
+  <script src='https://cdn.firebase.com/v0/firebase.js'></script>
+  <script type="text/javascript" defer src="js/firebase.js"></script>
+  <script type="text/javascript" defer src="js/map.js"></script>
+  <script type="text/javascript" defer src="js/app.js"></script>
 </body>
 </html>
+

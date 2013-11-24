@@ -40,6 +40,15 @@ function InitializeMap(myPos) {
       var map = new google.maps.Map(document.getElementById("map-canvas"), myOptions);
 
       //Set the map for directionsRenderer
+      /*_directionsRenderer.setOptions(
+        {
+          markerOptions: [
+            {
+              icon: "http://www.cophallparkinggatwick.co.uk/furniture/touch-icon-windowsphone.png",
+              visible: false
+            }
+          ]
+        });*/
       _directionsRenderer.setMap(map);
      
       console.log("DirectionsRenderer");
@@ -56,8 +65,43 @@ function InitializeMap(myPos) {
           _mapPoints.push(new google.maps.LatLng(pMe.latitude, pMe.longitude));
           _mapPoints.push(new google.maps.LatLng(pFriend.latitude, pFriend.longitude));
 
-          console.log(_mapPoints);
-          getRoutePointsAndWaypoints();
+          if(vMyTrip[pFriend.id] != null)
+          {
+            _mapPoints.push(new google.maps.LatLng(vMyTrip[pFriend.id].latitude, vMyTrip[pFriend.id].longitude));
+
+            getRoutePointsAndWaypoints();
+
+            myTripRef.on('value', function(oTrip)
+            {
+              oTrip = oTrip.val();
+
+              _mapPoints[2] = new google.maps.LatLng(oTrip[pFriend.id].latitude, oTrip[pFriend.id].longitude);
+
+              getRoutePointsAndWaypoints();
+            });
+          }
+          else
+          {
+            var myFriendTripRef = new Firebase('https://tripapp.firebaseio.com/trips/'+vMyTrip.with);
+
+            myFriendTripRef.once('value', function(oFriendT)
+            {
+              oFriendT = oFriendT.val();
+
+              _mapPoints.push(new google.maps.LatLng(oFriendT[me.id].latitude, oFriendT[me.id].longitude));
+
+              getRoutePointsAndWaypoints();
+
+              myFriendTripRef.on('value', function(oFriendTt)
+              {
+                oFriendTt = oFriendTt.val();
+
+                _mapPoints[2] = new google.maps.LatLng(oFriendTt[me.id].latitude, oFriendTt[me.id].longitude);
+
+                getRoutePointsAndWaypoints();
+              });
+            });
+          }
 
           friendRef.on('value',function(pFriend)
           {
@@ -164,3 +208,43 @@ function drawRoute(originAddress, destinationAddress, _waypoints) {
         }
     });
 }
+
+document.querySelector('#map-submit-directions').addEventListener('click', function()
+{
+  var direction = $("#map-directions").val();
+
+  $.getJSON("http://maps.googleapis.com/maps/api/geocode/json?address="+direction+"&sensor=true", function(data)
+  {
+    myTripRef.once('value', function(myTrip)
+    {
+      myTrip = myTrip.val();
+
+      myFriendTripRef = new Firebase('https://tripapp.firebaseio.com/trips/'+myTrip.with);
+
+      myFriendTripRef.once('value', function(friendTrip)
+      {
+        friendTrip = friendTrip.val();
+
+        direction = data.results[0].geometry.location;
+
+        _mapPoints[2] = new google.maps.LatLng(direction.lat, direction.lng);
+        getRoutePointsAndWaypoints();
+
+        if(myTrip[myTrip.with] != null)
+        {
+          myTrip[myTrip.with].latitude = direction.lat;
+          myTrip[myTrip.with].longitude = direction.lng;
+
+          myTripRef.set(myTrip);
+        }
+        else
+        {
+          friendTrip[me.id].latitude = direction.lat;
+          friendTrip[me.id].longitude = direction.lng;
+
+          friendTripRef.set(friendTrip);
+        }
+      });
+    });
+  });
+});

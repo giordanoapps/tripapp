@@ -304,6 +304,23 @@ section[data-type="sidebar"] > nav > h2 {
   box-shadow: inset 0px 0px 1px rgba(194, 194, 194, 1);
 }
 
-section[role="region"] > .content {
-  padding: 0px;
+button.blue,
+a[role="button"].blue,
+.button.blue {
+  background: #4096ee;
+  background: -moz-linear-gradient(top, #4096ee 0%, #4096ee 100%);
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#4096ee), color-stop(100%,#4096ee));
+  background: -webkit-linear-gradient(top, #4096ee 0%,#4096ee 100%);
+  background: -o-linear-gradient(top, #4096ee 0%,#4096ee 100%);
+  background: -ms-linear-gradient(top, #4096ee 0%,#4096ee 100%);
+  background: linear-gradient(to bottom, #4096ee 0%,#4096ee 100%);
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#4096ee', endColorstr='#4096ee',GradientType=0 );
+  color: #fff;
+  text-shadow: 0.1rem .1rem .1rem rgba(0, 0, 0, 0.6);
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.full-form {
+  margin-left: 1rem !important;
 }

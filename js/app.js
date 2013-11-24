@@ -1,17 +1,45 @@
-$("#teste").click(function()
+$("#map-exit").click(function()
 {
-  document.querySelector('#map-areas').className = 'current';
-  document.querySelector('[data-position="current"]').className = 'left';
-});
-$("#map-areas-back").click(function()
-{
-  document.querySelector('#map-areas').className = 'right';
-  document.querySelector('[data-position="current"]').className = 'current';
+  myTripRef.once('value', function(trip)
+  {
+    trip = trip.val();
+
+    var friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+trip.with);
+    friendTrip.once('value', function(fTrip)
+    {
+      fTrip = fTrip.val();
+
+      if(fTrip[me.id] != null)
+        delete fTrip[me.id];
+
+      if(trip[trip.with] != null)
+        delete trip[trip.with];
+
+      fTrip.invited = true;
+      fTrip.trippin = true;
+      fTrip.canceled = true;
+      fTrip.with    = "none";
+
+      friendTrip.set(fTrip, function()
+      {
+        trip.invited = false;
+        trip.trippin = false;
+        trip.canceled = false;
+        trip.with    = "none";
+
+        myTripRef.set(trip, function()
+        {
+          alert("Trip canceled!");
+
+          changeSection("section-map",0);
+        });
+      });
+    });
+  });
 });
 
 /*//action menu
 document.querySelector('#btn-action-menu').addEventListener ('click', function () {
-  document.querySelector('#action-menu').className = 'fade-in';
 });
 document.querySelector('#action-menu').addEventListener ('click', function () {
   this.className = 'fade-out';
@@ -154,6 +182,35 @@ document.querySelector('#btn-toolbars-back').addEventListener ('click', function
   document.querySelector('[data-position="current"]').className = 'current';
 });
 */
+
+function changeSection(target, active)
+{
+  if(active)
+  {
+    document.querySelector('#'+target).className = 'current';
+    document.querySelector('[data-position="current"]').className = 'left';
+  }
+  else
+  {
+    document.querySelector('#'+target).className = 'right';
+    document.querySelector('[data-position="current"]').className = 'current';
+  }
+}
+
+function showOverlay(target, active)
+{
+  if(active)
+  {
+    document.querySelector('#'+target).className = 'fade-in';
+  }
+  else
+  {
+    document.querySelector('#'+target).className = 'fade-out';
+  }
+}
+
+//showOverlay("overlay-loading", 1);
+
 var me;
 var usersRef   = new Firebase('https://tripapp.firebaseio.com/users');
 var tripsRef   = new Firebase('https://tripapp.firebaseio.com/trips');
@@ -162,6 +219,8 @@ var meRef, myTripRef, myFriendRef;
 
 window.fbAsyncInit = function()
 {
+  //showOverlay("overlay-loading", 0);
+
   FB.init(
   {
     appId      : '640821362635753',
@@ -176,7 +235,8 @@ window.fbAsyncInit = function()
     if (response.status === 'connected')
     {
 
-      $("#loginButton").hide();
+      changeSection("section-signin",0);
+
       FB.api('/me', function(response)
       {
         var data, aux;
@@ -191,6 +251,7 @@ window.fbAsyncInit = function()
             //ADD USER FIREBASE
             data =
             {
+              "id": response.id,
               "name": response.name,
               "online": true,
               "latitude": 0,
@@ -236,8 +297,8 @@ window.fbAsyncInit = function()
 
                 if(snapshot.trippin)
                 {
-                  document.querySelector('#map-areas').className = 'current';
-                  document.querySelector('[data-position="current"]').className = 'left';
+                  changeSection("section-map",1);
+
                   showMap("me");
                 }
                 else
@@ -255,13 +316,9 @@ window.fbAsyncInit = function()
 
               if(snapshot.trippin)
               {
-                document.querySelector('#map-areas').className = 'current';
-                document.querySelector('[data-position="current"]').className = 'left';
+                changeSection("section-map",1);
+
                 showMap("me");
-              }
-              else
-              {
-                hideMap();
               }
             });
           }
@@ -299,7 +356,7 @@ window.fbAsyncInit = function()
 (function(d){
  var js, id = 'facebook-jssdk', ref = d.getElementsByTagName('script')[0];
  if (d.getElementById(id)) {return;}
- js = d.createElement('script'); js.id = id; js.async = true;
+ js = d.createElement('script'); js.id = id; js.async = false;
  js.src = "//connect.facebook.net/en_US/all.js";
  ref.parentNode.insertBefore(js, ref);
 }(document));
@@ -311,7 +368,7 @@ function getFriendsUsing()
 
     usersRef.once('value', function(snapshot)
     {
-      var aux;
+      var aux, count = 0;
 
       myFriendRef.once('value', function(friends)
       {
@@ -330,18 +387,28 @@ function getFriendsUsing()
           if(snapshot.hasChild(response.data[i].id))
           {
             friends[response.data[i].id] = true;
+            count ++;
           }
+        }
+        
+        var target  = $("#friends");
+        target.html("");
+
+        if(count == 0)
+        {
+          var html = "<li id=\""+i+"\">";
+          html += "<p>You haven't any friends using the app.</p>";
+          html += "</li>";
+
+          target.append(html);
         }
 
         myFriendRef.update(friends, function()
         {
           myFriendRef.once('value', function(snapshot)
           {
-            var target  = $("#friends");
             var friends = snapshot.val();
             var friend, html;
-
-            target.html("");
 
             for(var i in friends)
             {
@@ -351,8 +418,13 @@ function getFriendsUsing()
               {
                 snapshot = snapshot.val();
 
-                html = "<li id=\""+i+"\">";
-                html += snapshot.name;
+                html = "<li id=\""+snapshot.id+"\">";
+                html += "<aside class=\"pack-start offline\">";
+                html += "<img alt=\"photo\" src=\"http://graph.facebook.com/"+snapshot.id+"/picture\">";
+                html += "</aside>"
+                html += "<p>"+snapshot.name;
+                html += "<progress style=\"display:none\" class=\"spin-people\"></progress>";
+                html += "</p>";
                 html += "</li>";
 
                 target.append(html);
@@ -365,66 +437,90 @@ function getFriendsUsing()
                   {
                     trip = trip.val();
 
-                    if(trip[i].accepted)
+                    if(trip[snapshot.id].accepted)
                     {
-                      $("#acceptedTrip").addClass("fade-in");
-                      $("#whoAccepted").html(snapshot.name + " accepted your request!");
-                      $("#acceptedTrip button.danger").click(function()
+                      if(!trip.trippin)
                       {
-                        $('#acceptedTrip').hide();
-                        $('#acceptedTrip').addClass('fade-out');
+                        showOverlay("overlay-accepted-trip", 1);
 
-                        trip.invited = false;
-                        trip.with      = "none";
+                        $("#whoAccepted").html(snapshot.name + " accepted your request!");
 
-                        delete trip[i];
+                        $("#"+snapshot.id+" progress").css({"display":"none"});
 
-                        myTripRef.set(trip, function()
+                        $("#overlay-accepted-trip button.danger").click(function()
                         {
-                          friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+i);
-                          friendTrip.once('value',function(fTrip)
+                          showOverlay("overlay-accepted-trip", 0);
+
+                          if($("section[data-position = current]").attr("class") == "left")
                           {
-                            fTrip = fTrip.val();
+                            changeSection("section-map",0);
+                          }
+                          trip.invited = false;
+                          trip.trippin = false;
+                          trip.with    = "none";
+                          
+                          $("#"+snapshot.id+" progress").css({"display":"none"});
 
-                            fTrip.invited   = false;
-                            fTrip.canceled  = true;
-                            fTrip.with      = "none";
+                          delete trip[snapshot.id];
 
-                            friendTrip.update(fTrip);
+                          myTripRef.set(trip, function()
+                          {
+                            friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+snapshot.id);
+                            friendTrip.once('value',function(fTrip)
+                            {
+                              fTrip = fTrip.val();
+
+                              fTrip.invited   = false;
+                              fTrip.canceled  = true;
+                              fTrip.trippin   = false;
+                              fTrip.with      = "none";
+
+                              friendTrip.update(fTrip);
+                            });
                           });
                         });
-                      });
-                      $("#acceptedTrip button.recommend").click(function()
-                      {
-                        $('#acceptedTrip').hide();
-                        $('#acceptedTrip').addClass('fade-out');
-
-                        trip.trippin = true;
-
-                        myTripRef.set(trip);
-
-                        friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+i);
-                        friendTrip.once('value',function(fTrip)
+                        $("#overlay-accepted-trip button.recommend").click(function()
                         {
-                          fTrip = fTrip.val();
+                          showOverlay("overlay-accepted-trip", 0);
 
-                          fTrip.trippin = true;
+                          trip.trippin = true;
 
-                          friendTrip.set(fTrip);
+                          meRef.once('value', function(vMe)
+                          {
+                            vMe = vMe.val();
+
+                            trip[snapshot.id].latitude = vMe.latitude;
+                            trip[snapshot.id].longitude = vMe.longitude;
+
+                            myTripRef.set(trip);
+
+                            friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+snapshot.id);
+                            friendTrip.once('value',function(fTrip)
+                            {
+                              fTrip = fTrip.val();
+
+                              fTrip.trippin = true;
+
+                              friendTrip.set(fTrip);
+                            });
+                          });
                         });
-                      });
+                      }
                     }
 
-                    if(trip[i].canceled)
+                    if(trip[snapshot.id].canceled)
                     {
                       trip.invited = false;
                       trip.with    = "none";
 
-                      delete trip[i];
+                      delete trip[snapshot.id];
 
                       myTripRef.set(trip, function()
                       {
                         alert("Trip canceled!");
+
+                        if($("#section-map").hasClass("current"))
+                          changeSection("section-map",0);
                       });
                     }
                   });
@@ -435,31 +531,13 @@ function getFriendsUsing()
               {
                 if(snapshot.val().online)
                 {
-                  myTripRef.once('value', function(trip)
-                  {
-                    trip = trip.val();
-
-                    if(trip.trippin)
-                    {
-                      alert("Your friend is back!")
-                    }
-                  });
-                  $("#"+i).removeClass("offline");
-                  $("#"+i).addClass("online");
+                  $("#"+snapshot.val().id+" aside").removeClass("offline");
+                  $("#"+snapshot.val().id+" aside").addClass("online");
                 }
                 else
                 {
-                  myTripRef.once('value', function(trip)
-                  {
-                    trip = trip.val();
-
-                    if(trip.trippin)
-                    {
-                      alert("Your friend has been disconnected!")
-                    }
-                  });
-                  $("#"+i).removeClass("online");
-                  $("#"+i).addClass("offline");
+                  $("#"+snapshot.val().id+" aside").removeClass("online");
+                  $("#"+snapshot.val().id+" aside").addClass("offline");
                 }
               });
             }
@@ -472,66 +550,71 @@ function getFriendsUsing()
 
           if(trip.invited)
           {
-            var friendRef = new Firebase('https://tripapp.firebaseio.com/users/'+trip.with);
-
-            friendRef.once('value', function(friend)
+            if(!trip.trippin)
             {
-              friend = friend.val();
+              var friendRef = new Firebase('https://tripapp.firebaseio.com/users/'+trip.with);
 
-              $("#confirmTrip").addClass("fade-in");
-              $("#whoInvited").html(friend.name + " invited you to a trip!");
-              $("#confirmTrip button.danger").click(function()
+              friendRef.once('value', function(friend)
               {
-                $('#confirmTrip').hide();
-                $('#confirmTrip').addClass('fade-out');
+                friend = friend.val();
 
-                var friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+trip.with);
-                friendTrip.once('value', function(fTrip)
+                showOverlay("overlay-confirm-trip", 1);
+
+                $("#whoInvited").html(friend.name + " invited you to a trip!");
+                $("#overlay-confirm-trip button.danger").click(function()
                 {
-                  fTrip = fTrip.val();
+                  showOverlay("overlay-confirm-trip", 0);
 
-                  console.log(fTrip);
-                  fTrip[me.id].canceled = true;
-
-                  friendTrip.update(fTrip, function()
+                  var friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+trip.with);
+                  friendTrip.once('value', function(fTrip)
                   {
-                    trip.invited = false;
-                    trip.with      = "none";
+                    fTrip = fTrip.val();
 
-                    myTripRef.update(trip);
+                    fTrip[me.id].canceled = true;
+
+                    friendTrip.update(fTrip, function()
+                    {
+                      trip.invited = false;
+                      trip.trippin = false;
+                      trip.with    = "none";
+
+                      myTripRef.update(trip);
+                    });
+                  });
+                });
+                $("#overlay-confirm-trip button.recommend").click(function()
+                {
+                  showOverlay("overlay-confirm-trip", 0);
+
+                  var friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+trip.with);
+                  friendTrip.once('value', function(fTrip)
+                  {
+                    fTrip = fTrip.val();
+
+                    fTrip[me.id].accepted = true;
+
+                    friendTrip.update(fTrip);
                   });
                 });
               });
-              $("#confirmTrip button.recommend").click(function()
-              {
-                $('#confirmTrip').hide();
-                $('#confirmTrip').addClass('fade-out');
-
-                var friendTrip = new Firebase('https://tripapp.firebaseio.com/trips/'+trip.with);
-                friendTrip.once('value', function(fTrip)
-                {
-                  fTrip = fTrip.val();
-
-                  fTrip[me.id].accepted = true;
-
-                  friendTrip.update(fTrip);
-                });
-              });
-            });
+            }
           }
 
           if(trip.canceled)
           {                
             trip.invited  = false;
             trip.canceled = false;
-            trip.with       = "none";
+            trip.trippin  = false;
+            trip.with     = "none";
 
             myTripRef.update(trip, function()
             {
-              $('#confirmTrip').hide();
-              $('#confirmTrip').addClass('fade-out');
+              showOverlay("overlay-confirm-trip", 0);
 
               alert("Trip canceled!");
+              
+              if($("#section-map").hasClass("current"))
+                changeSection("section-map",0);
             });
           }
         });
@@ -545,6 +628,9 @@ function startTrip()
   $("#friends li").click(function()
   {
     var friend = $(this).attr("id");
+
+    $("#"+friend+" progress").css({"display":"inline"});
+
     myTripRef.once('value', function(trip)
     {
       trip = trip.val();
